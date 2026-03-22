@@ -209,6 +209,7 @@ export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
   const [contactStatus, setContactStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+  const [submittedContactData, setSubmittedContactData] = useState<{name: string, type: string} | null>(null);
 
   // PWA + Network State
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -1868,39 +1869,83 @@ CONTEXT: You can see the user's calculator state in [CALCULATOR_STATE] tags.`
                 </button>
               </div>
               <div className="p-6 space-y-6">
-                <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
-                  Built by an engineering student at Priyadarshini College of Engineering to make technical calculations smarter and cleaner. Found a bug or have a feature request? Let me know!
-                </p>
-                <form
-                  ref={contactFormRef}
-                  className="space-y-4"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    setContactStatus('sending');
-                    try {
-                      const emailjs = (window as any).emailjs;
-                      if (!emailjs) throw new Error('EmailJS not loaded');
-                      const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID';
-                      const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'YOUR_TEMPLATE_ID';
-                      const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_PUBLIC_KEY';
-                      await emailjs.sendForm(serviceId, templateId, contactFormRef.current!, publicKey);
-                      setContactStatus('success');
-                      contactFormRef.current?.reset();
-                    } catch (err) {
-                      console.error('EmailJS error:', err);
-                      setContactStatus('error');
-                    }
-                  }}
-                >
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider opacity-60 ml-1">Name</label>
-                    <input
-                      type="text"
-                      name="from_name"
-                      required
-                      className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 ring-[var(--accent)]/20 transition-all shadow-sm"
-                      placeholder="Your name"
-                    />
+                {contactStatus === 'success' && submittedContactData ? (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center justify-center py-6 text-center space-y-4"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-2 shadow-inner border border-emerald-500/20">
+                      <Check className="text-emerald-500" size={32} />
+                    </div>
+                    <h3 className="text-2xl font-bold bg-gradient-to-br from-[var(--text)] to-[var(--muted-foreground)] bg-clip-text text-transparent">Thank you, {submittedContactData.name}!</h3>
+                    <p className="text-[var(--muted-foreground)] text-sm leading-relaxed max-w-[280px]">
+                      Your {submittedContactData.type} problem will be solved perfectly and I will get back to you within 24 hours.
+                    </p>
+                    <Button 
+                      variant="secondary" 
+                      onClick={() => {
+                        setContactStatus('idle');
+                        setSubmittedContactData(null);
+                        setIsContactModalOpen(false);
+                      }}
+                      className="mt-4 px-8 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-medium text-sm"
+                    >
+                      Close Window
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <>
+                    <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+                      Built by an engineering student at Priyadarshini College of Engineering to make technical calculations smarter and cleaner. Found a bug or have a feature request? Let me know!
+                    </p>
+                    <form
+                      ref={contactFormRef}
+                      className="space-y-4"
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setContactStatus('sending');
+                        const formData = new FormData(e.currentTarget);
+                        const name = (formData.get('from_name') as string) || 'User';
+                        const typeVal = (formData.get('type') as string) || 'Suggestion';
+                        try {
+                          const emailjs = (window as any).emailjs;
+                          if (!emailjs) throw new Error('EmailJS not loaded');
+                          const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID';
+                          const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID || 'YOUR_TEMPLATE_ID';
+                          const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || 'YOUR_PUBLIC_KEY';
+                          await emailjs.sendForm(serviceId, templateId, contactFormRef.current!, publicKey);
+                          setSubmittedContactData({ name, type: typeVal === 'Bug Report' ? 'bug report' : 'suggestion' });
+                          setContactStatus('success');
+                          contactFormRef.current?.reset();
+                        } catch (err) {
+                          console.error('EmailJS error:', err);
+                          setContactStatus('error');
+                        }
+                      }}
+                    >
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider opacity-60 ml-1">Name</label>
+                      <input
+                        type="text"
+                        name="from_name"
+                        required
+                        className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 ring-[var(--accent)]/20 transition-all shadow-sm"
+                        placeholder="Your name"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-wider opacity-60 ml-1">Type</label>
+                      <select
+                        name="type"
+                        required
+                        className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 ring-[var(--accent)]/20 transition-all shadow-sm appearance-none"
+                      >
+                        <option value="Suggestion">💡 Suggestion</option>
+                        <option value="Bug Report">🐛 Bug Report</option>
+                      </select>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase tracking-wider opacity-60 ml-1">Email</label>
@@ -1908,12 +1953,12 @@ CONTEXT: You can see the user's calculator state in [CALCULATOR_STATE] tags.`
                       type="email"
                       name="reply_to"
                       required
+                      placeholder="your.email@example.com"
                       className="w-full bg-[var(--card-bg)] border border-[var(--card-border)] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 ring-[var(--accent)]/20 transition-all shadow-sm"
-                      placeholder="your@email.com"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider opacity-60 ml-1">Suggestion / Bug Report</label>
+                    <label className="text-xs font-bold uppercase tracking-wider opacity-60 ml-1">Message</label>
                     <textarea
                       name="message"
                       required
@@ -1922,6 +1967,7 @@ CONTEXT: You can see the user's calculator state in [CALCULATOR_STATE] tags.`
                       placeholder="Tell me what you think..."
                     />
                   </div>
+                  <input type="hidden" name="time" value={new Date().toLocaleString()} />
 
                   {/* Status Messages */}
                   <AnimatePresence>
@@ -1948,6 +1994,8 @@ CONTEXT: You can see the user's calculator state in [CALCULATOR_STATE] tags.`
                     {contactStatus === 'sending' ? 'Sending...' : 'Send Message'}
                   </Button>
                 </form>
+              </>
+            )}
               </div>
             </motion.div>
           </motion.div>
