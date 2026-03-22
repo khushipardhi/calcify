@@ -1,0 +1,5 @@
+{
+  "name": "Calcify",
+  "description": "A premium, modern, full-featured Scientific Calculator Web Application with Matrix, Statistics, Unit Conversion, and Graph Plotting capabilities.",
+  "requestFramePermissions": ["camera"]
+}
